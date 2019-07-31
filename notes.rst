@@ -2,7 +2,7 @@
 Notes for a new SQL(Alchemy) handler
 =========================================================
 
-Overview
+Goals
 ===========================
 
 #. Config is a hash, not a file path
@@ -616,12 +616,12 @@ Several things will make this a lot simpler. The main observations driving this 
         type: Dataset
         attributes:
             attr1: value1
-        contents:
+        children:
             sequence_name:
                 type: Sequence
                 attributes:
                     attr2: value2
-                contents:
+                children:
                     a:
                         type: String
                     b: String  # Shorthand for explicit type, no other props
