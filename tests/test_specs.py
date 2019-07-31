@@ -83,79 +83,67 @@ def test_models_are_equal(a, b, equal):
     assert models_are_equal(a, b) == equal
 
 
-@pytest.mark.parametrize('spec, exp_model', [
+@pytest.mark.parametrize('name, declaration, exp_model', [
     (
+        'dataset_name',
         {
-            'Dataset': {
-                'name': 'dataset_name',
-                'items': [
-                    {
-                        'Sequence': {
-                            'name': 'sequence_name',
-                            'items': [
-                                { 'String': 'a' },
-                                { 'Float32': 'b' },
-                                { 'Float32': 'c' },
-                            ]
-                        }
+            'type': 'Dataset',
+            'children': {
+                'sequence_name': {
+                    'type': 'Sequence',
+                    'children': {
+                        'a': 'String',
+                        'b': 'Float32',
+                        'c': 'Float32',
                     }
-                ]
+                }
             }
         },
         model1()
     ),
     (
+        'dataset_name',
         {
-            'Dataset': {
-                'name': 'dataset_name',
-                'attributes': {
-                    'ds1': 'ds1_value'
-                },
-                'items': [
-                    {
-                        'Sequence': {
-                            'name': 'sequence_name',
+            'type': 'Dataset',
+            'attributes': {
+                'ds1': 'ds1_value'
+            },
+            'children': {
+                'sequence_name': {
+                    'type': 'Sequence',
+                    'attributes': {
+                        'seq1': 'seq1_value',
+                        'seq2': 'seq2_value',
+                    },
+                    'children': {
+                        'a': {
+                            'type': 'String',
                             'attributes': {
-                                'seq1': 'seq1_value',
-                                'seq2': 'seq2_value',
-                            },
-                            'items': [
-                                { 
-                                    'String': {
-                                        'name': 'a',
-                                        'attributes': {
-                                            'a1': 'a1_value',
-                                            'a2': 'a2_value',
-                                        }
-                                    },
-                                },
-                                { 
-                                    'Float32': {
-                                        'name': 'b',
-                                        'attributes': {
-                                            'b1': 'b1_value',
-                                            'b2': 'b2_value',
-                                        }
-                                    } 
-                                },
-                                { 
-                                    'Float32': {
-                                        'name': 'c',
-                                        'attributes': {
-                                            'c1': 'c1_value',
-                                            'c2': 'c2_value',
-                                        }
-                                    } 
-                                },
-                            ]
-                        }
+                                'a1': 'a1_value',
+                                'a2': 'a2_value',
+                            }
+                        },
+                        'b':  {
+                            'type': 'Float32',
+                            'attributes': {
+                                'b1': 'b1_value',
+                                'b2': 'b2_value',
+                            }
+                        },
+                        'c':  {
+                            'type': 'Float32',
+                            'attributes': {
+                                'c1': 'c1_value',
+                                'c2': 'c2_value',
+                            }
+                        },
                     }
-                ]
+                }
             }
         },
         model2()
     ),
 ])
-def test_dds_spec_to_model(spec, exp_model):
-    model = dds_spec_to_model(spec)
+def test_dds_spec_to_model(name, declaration, exp_model):
+    model = dds_spec_to_model(name, declaration)
     assert models_are_equal(model, exp_model)

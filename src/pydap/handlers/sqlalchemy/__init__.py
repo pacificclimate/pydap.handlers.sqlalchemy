@@ -21,53 +21,55 @@ def dds_to_type(name):
     return _dds_to_type.get(name, BaseType)
 
 
-def dds_spec_to_model(spec):
-    """
-    Convert a DDS specification (in dictionary form) to a PyDAP model.
-
-    :param spec: DDS specification, which is a dictionary containing exactly
-        one key-value pair.
-        The key is the name of the datatype (a base type or a constructor).
-        When the datatype is a base type, the value is a string giving the
-        name of this item.
-        When the datatype is a constructor, the value is a dict with keys
-        `name` (giving the name of this item), and `items` (giving the content
-        of this item).
-    """
-
-    spec_content = spec.items()
-    if len(spec_content) != 1:
-        raise TypeError(
-            'DDS spec must contain exactly 1 key-value pair; found {}: '
-            'keys {}'
-            .format(len(spec_content), spec_content.keys())
+def dds_spec_to_model(name, declaration):
+    if not isinstance(declaration, (str, dict)):
+        raise ValueError(
+            'DDS declaration must be either a string or a dictionary.'
+            'item {} of type {} is not valid'
+                .format(name, type(declaration))
         )
-    type_name, declaration = next(iter(spec_content))
-    Type = dds_to_type(type_name)
+
+    # Simple case: declaration is string specifying type (only)
     if type(declaration) is str:
-        return Type(declaration)
+        Type = dds_to_type(declaration)
+        return Type(name=name)
+
+    # General case: declaration is dict specifying type, attributes, children
+    Type = dds_to_type(declaration['type'])
+    # Construct parent model
     model = Type(
-        name = declaration['name'],
+        name=name,
         attributes=declaration.get('attributes')
     )
-    for item in declaration.get('items', []):
-        item_model = dds_spec_to_model(item)
-        # Duplication of the model name like this seems to be standard in PyDAP.
-        model[item_model.name] = item_model
+    # Add children
+    for child_name, child_declaration in declaration.get('children', {}).items():
+        model[child_name] = dds_spec_to_model(child_name, child_declaration)
+
     return model
 
 
-def dataset_model(config):
+def dataset_model(spec):
     """
-    Return the Dataset model defined in this config.
-    For the user's convenience we do the work of pulling out the key 'Dataset'
-    into the special 1-key dict required by `dds_spec_to_model`.
+    Return the dataset model defined by this spec.
 
-    :param config: A dict containing the key 'Dataset'. The dict containing
-        just this key and its value is a DDS specification.
+    :param spec: A Dataset spec.
+        A Dataset spec is a dict containing exactly one key-value pair.
+        The key is the name of the Dataset, and the value must have property
+        'type' == 'Dataset'
     :return:
     """
-    return dds_spec_to_model({ 'Dataset': config['Dataset'] })
+    if len(spec) != 1:
+        raise ValueError(
+            'DDS spec must contain exactly 1 key-value pair; found {}: '
+            'keys {}'
+            .format(len(spec), spec.keys())
+        )
+    name, declaration = next(iter(spec.items()))
+    if not isinstance(declaration, dict) or declaration.get('type') != 'Dataset':
+        raise ValueError(
+            'DDS spec must specify Dataset at top level'
+        )
+    return dds_spec_to_model(name, declaration)
 
 
 def dict_merge(a, b):
@@ -79,7 +81,7 @@ def dict_merge(a, b):
             return b[key]
         return a[key]
     if isinstance(a, dict) and isinstance(b, dict):
-        # This was supposed to be "simpler", but it's not. It is correct.
+        # This was supposed to be "simpler" but it's not. It is however correct.
         # return {
         #     **{ key: dict_merge(a[key], b[key]) if key in a else b[key]
         #           for key in b},
@@ -111,11 +113,14 @@ class SQLAlchemyHandler(BaseHandler):
             raise OpenFileError(message)
 
         self.config = config
-        self.dataset = dataset_model(config)
+        self.dataset = dataset_model(config['dataset'])
 
     def update(self, config, merge=False):
+        # Merging dataset specs is not likely to get you what you want.
+        # Maybe this should be a shallow merge, or a shallow merge on dataset
+        # at least.
         self.config = dict_merge(self.config, config) if merge else config
-        self.dataset = dataset_model(self.config)
+        self.dataset = dataset_model(self.config['dataset'])
 
 
 
