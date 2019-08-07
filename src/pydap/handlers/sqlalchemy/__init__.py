@@ -194,7 +194,7 @@ def dds_spec_to_model(name, declaration, db_config):
     :param db_config: Configuration for a database connection.
     :type db_config: dict
 
-    :return:
+    :return: model
     """
     if not isinstance(declaration, (str, dict)):
         raise ValueError(
@@ -291,18 +291,20 @@ class SQLAlchemyHandler(BaseHandler):
         BaseHandler.__init__(self)
 
         if filepath is None:
-            config = {}
+            self.config = {}
+            self.dataset = None
         else:
             try:
-                with open(filepath, 'Ur') as fp:
-                    fp = open(filepath, 'Ur')
-                    config = yaml.load(fp)
+                with open(filepath, 'r') as file:
+                    config = yaml.load(file, Loader=yaml.FullLoader)
             except Exception as exc:
-                message = 'Unable to open file {filepath}: {exc}'.format(filepath=filepath, exc=exc)
-                raise OpenFileError(message)
+                raise OpenFileError(
+                    'Unable to open file {filepath}: {exc}'
+                        .format(filepath=filepath, exc=exc)
+                )
 
-        self.config = config
-        self.dataset = dataset_model(config)
+            self.config = config
+            self.dataset = dataset_model(config)
 
     def update(self, config, merge=False):
         """
@@ -322,9 +324,10 @@ class SQLAlchemyHandler(BaseHandler):
 
         self.config = {**self.config, **config} if merge else config
         self.dataset = dataset_model(self.config)
+        return self
 
 
-def stream(data_source, db_config):
+def data_source_to_stream(data_source, db_config):
     """
     Return an iterable that yields data items derived from a data source.
 
@@ -357,12 +360,13 @@ def stream(data_source, db_config):
         sql_re = re.compile(r'^\s*SQL\{\{(.*)\}\}\s*$')
         match = sql_re.search(data_source)
         if match is None:
-            # It's just a string.
-            data = data_source
+            # It's just a string. A string is an iterable itself, but
+            # we want an iterable that returns the whole string. Hence:
+            data = [data_source]
         else:
             # It's a query. Run it.
             with session_scope(db_config['dsn']) as session:
-                data = session.query(text(match.group(1)))
+                data = session.execute(match.group(1))
     else:
         data = data_source
 
@@ -413,7 +417,7 @@ class SQLAlchemyData(IterData):
         self.data_source = data_source
         self.db_config = db_config
         super().__init__(
-            stream=stream(data_source, db_config),
+            stream=data_source_to_stream(data_source, db_config),
             template=template,
             ifilter=ifilter, imap=imap, islice=islice
         )
