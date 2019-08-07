@@ -2,37 +2,8 @@ import pytest
 
 from pydap.model import DatasetType, BaseType, SequenceType
 from pydap.handlers.sqlalchemy import dds_spec_to_model
-from pydap.handlers.sqlalchemy import dict_merge
 
-e = {}
-d1 = { 'a': 1, 'b': 2 }
-d2 = { 'a': 10, 'b': 20}
-d3 = { 'a': 10, 'c': 3 }
-d4 = { 'x': { 'a': 1, 'b': 2 }, 'y': { 'c': 3, 'd': 4 } }
-d5 = { 'x': { 'a': 10, 'b': 2 }, 'y': { 'c': 3, 'd': 40 } }
-d6 = { 'x': { 'a': 1, 'b': 2 }, 'y': { 'c': 3, 'd': 4 }, 'w': 8 }
-d7 = { 'x': { 'a': 10, 'b': 2 }, 'y': { 'c': 3, 'd': 40 }, 'z': 9 }
-d8 = { 'x': d1.copy() }
-d9 = { 'x': d3.copy() }
-@pytest.mark.parametrize('a, b, result', [
-    (d1, e, d1),
-    (e, d1, d1),
-    (d1, d1, d1),
-    (d1, d2, d2),
-    (d2, d1, d1),
-    (d1, d3, { 'a': 10, 'b': 2, 'c': 3 }),
-    (d3, d1, { 'a': 1, 'b': 2, 'c': 3 }),
-    (d4, d5, d5),
-    (d5, d4, d4),
-    (d6, d7, { 'x': { 'a': 10, 'b': 2 }, 'y': { 'c': 3, 'd': 40 }, 'z': 9, 'w': 8 }),
-    (d7, d6, { 'x': { 'a': 1, 'b': 2 }, 'y': { 'c': 3, 'd': 4 }, 'z': 9, 'w': 8 }),
-    (d8, d9, { 'x': { 'a': 10, 'b': 2, 'c': 3 } }),
-    (d9, d8, { 'x': { 'a': 1, 'b': 2, 'c': 3 } }),
-])
-def test_dict_merge(a, b, result):
-    assert dict_merge(a, b) == result
-
-
+# TODO: Turn these into fixtures
 def model1():
     model = DatasetType('dataset_name')
     model['sequence_name'] = SequenceType('sequence_name')
@@ -145,5 +116,5 @@ def test_models_are_equal(a, b, equal):
     ),
 ])
 def test_dds_spec_to_model(name, declaration, exp_model):
-    model = dds_spec_to_model(name, declaration)
+    model = dds_spec_to_model(name, declaration, {})
     assert models_are_equal(model, exp_model)

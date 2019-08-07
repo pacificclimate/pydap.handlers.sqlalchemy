@@ -599,7 +599,8 @@ Several things will make this a lot simpler. The main observations driving this 
 * The base handler / derived handler architecture is much more complicated than needed. Instead,
   add an :code:`update(config)` method that allows the configuration (and therefore dataset, data
   source, etc.) to be updated with a programmatically derived value.
-  Typical usage would be::
+
+  New typical usage becomes::
 
     handler = pydap.handlers.SQLAlchemyHandler(filepath).update(config)
 
@@ -642,3 +643,26 @@ Several things will make this a lot simpler. The main observations driving this 
   if necessary.
 
 * Otherwise things remain much the same as above.
+
+Data
+=================================
+
+Data is tough to understand deeply in PyDAP.
+
+The following model type classes accept data:
+
+* BaseType
+
+* SequenceType
+  * This type has data attached directly to it.
+    * The data is an iterable (e.g., numpy array)
+    * Each iteration of the data provides data for populating a row of the SequenceType.
+  * The children of a SequenceType are BaseTypes.
+    * In this role, they do not have data attached directly to them.
+    * Do they have data type? It appears from the PyDAP model module docstring that the datatype
+      of a child is derived from the datatype of elements of the parent rows.
+      Need to understand numpy arrays. Need to understand numpy data types.
+      That example seems to show that we need to convert the output of the database query to
+      a numpy array with datatypes attached that contain both the column (child) name and the
+      numpy type.
+
